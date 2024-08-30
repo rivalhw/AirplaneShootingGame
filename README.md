@@ -17,3 +17,6 @@ AirplaneShootingGame V1.0 screenshot
 
 
 
+如果你有更好的想法或商业合作，可以email联系我，
+rivalhw@qq.com
+
