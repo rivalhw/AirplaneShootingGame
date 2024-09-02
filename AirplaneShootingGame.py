@@ -2,9 +2,11 @@ import pygame
 import random
 import time
 import os
+import sys
 
 # 游戏版本号
-GAME_VERSION = "V3.2"
+GAME_VERSION = "V3.3"
+AUTHOR_NAME = "游戏作者: 伟大的大伟"
 
 # 初始化 Pygame
 pygame.init()
@@ -55,8 +57,21 @@ bullets = []
 score = 0
 lives = 3
 
+# 字体路径根据操作系统进行选择
+if sys.platform.startswith("darwin"):  # MacOS
+    font_path = "/System/Library/Fonts/STHeiti Medium.ttc"
+elif sys.platform.startswith("win"):  # Windows
+    font_path = "C:/Windows/Fonts/simhei.ttf"  # 例如，使用SimHei字体
+else:
+    font_path = None  # 其他系统不指定字体路径
+
 # 字体设置
-font = pygame.font.Font("/System/Library/Fonts/STHeiti Medium.ttc", 36)  # 使用系统字体
+if font_path:
+    font = pygame.font.Font(font_path, 26)
+    small_font = pygame.font.Font(font_path, 18)  # 调整后的较小字体
+else:
+    font = pygame.font.SysFont(None, 26)  # 如果未指定字体路径，则使用默认字体
+    small_font = pygame.font.SysFont(None, 18)  # 调整后的较小字体
 
 # 游戏时间
 game_time = 60  # 游戏时间改为60秒
@@ -114,6 +129,8 @@ def main_game():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                pygame.quit()
+                sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     # 玩家子弹发射两列
@@ -204,14 +221,14 @@ def main_game():
 
         # 如果发生碰撞，暂停3秒并倒计时
         if collision_occurred:
-            for i in range(3, 0, -1):
-                screen.fill(BLACK)
-                countdown_text = font.render(f"恢复中: {i}", True, WHITE)
-                screen.blit(countdown_text, (width // 2 - 60, height // 2))
-                pygame.display.flip()
-                time.sleep(1)
-            reset_game()
-            if lives <= 0:
+            if lives > 0:
+                for i in range(3, 0, -1):
+                    screen.fill(BLACK)
+                    countdown_text = font.render(f"游戏恢复中: {i}", True, WHITE)
+                    screen.blit(countdown_text, (width // 2 - 60, height // 2))
+                    pygame.display.flip()
+                    time.sleep(1)
+            else:
                 running = False
 
         # 绘制游戏画面
@@ -232,40 +249,64 @@ def main_game():
         score_text = font.render(f"得分: {score}", True, WHITE)
         screen.blit(score_text, (10, 10))
 
+        # 显示剩余导弹数
+        missile_text = font.render(f"导弹: {missile_count}", True, WHITE)
+        screen.blit(missile_text, (10, 50))
+
+        # 显示剩余生命
+        lives_text = font.render(f"生命: {lives}", True, WHITE)
+        screen.blit(lives_text, (10, 90))
+
         # 显示倒计时
-        timer_text = font.render(f"剩余时间: {time_left}", True, WHITE)
+        timer_text = font.render(f"时间: {time_left}秒", True, WHITE)
         screen.blit(timer_text, (width - 200, 10))
 
-        # 显示导弹数量
-        missile_text = font.render(f"导弹: {missile_count}", True, WHITE)
-        screen.blit(missile_text, (10, 40))
-
-        # 显示剩余生命次数
-        lives_text = font.render(f"生命: {lives}", True, WHITE)
-        screen.blit(lives_text, (width - 200, 40))
-
-        # 显示版本号
-        version_text = font.render(f"版本号: {GAME_VERSION}", True, WHITE)
-        screen.blit(version_text, (width - 200, height - 40))
+        # 显示版本号和开发者信息
+        version_text = small_font.render(f"版本: {GAME_VERSION}", True, WHITE)
+        author_text = small_font.render(AUTHOR_NAME, True, WHITE)
+        screen.blit(version_text, (width - 220, height - 40))
+        screen.blit(author_text, (width - 220, height - 70))
 
         pygame.display.flip()
+
+        # 检查游戏结束条件
+        if lives <= 0 or time_left <= 0:
+            running = False
+
         clock.tick(60)
 
-    # 游戏结束时
+    # 更新历史最高分
     high_scores = update_high_scores(score)
-    screen.fill(BLACK)
-    final_score_text = font.render(f"最终得分: {score}", True, WHITE)
-    screen.blit(final_score_text, (width // 2 - 100, height // 2 - 50))
 
-    if high_scores:
-        leaderboard_text = "历史最高分:\n" + "\n".join([f"{i+1}. {score}" for i, score in enumerate(high_scores)])
-        leaderboard_surface = font.render(leaderboard_text, True, WHITE)
-        screen.blit(leaderboard_surface, (width // 2 - 100, height // 2 + 10))
+    # 游戏结束，显示最终得分和最高分榜单
+    game_over_screen(score, high_scores)
 
-    pygame.display.flip()
-    time.sleep(5)
+def game_over_screen(final_score, high_scores):
+    global running
+    running = True
+    while running:
+        screen.fill(BLACK)
+        game_over_text = font.render("游戏结束", True, WHITE)
+        final_score_text = font.render(f"最终得分: {final_score}", True, WHITE)
+        screen.blit(game_over_text, (width // 2 - 60, height // 2 - 50))
+        screen.blit(final_score_text, (width // 2 - 100, height // 2))
 
-    pygame.quit()
+        high_scores_text = font.render("最高分排行榜:", True, WHITE)
+        screen.blit(high_scores_text, (width // 2 - 100, height // 2 + 50))
+        for i, score in enumerate(high_scores):
+            score_text = font.render(f"{i + 1}. {score}", True, WHITE)
+            screen.blit(score_text, (width // 2 - 50, height // 2 + 100 + i * 30))
 
-# 启动游戏
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                reset_game()
+                main_game()
+
+reset_game()
 main_game()
