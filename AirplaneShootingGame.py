@@ -44,9 +44,10 @@ collision_sound = pygame.mixer.Sound("./sounds/Transformer/itwillreturn.mp3")
 missile_sound = pygame.mixer.Sound("./sounds/missile.mp3")
 transform_sound1 = pygame.mixer.Sound("./sounds/Transformer/transformer1.mp3")
 transform_sound2 = pygame.mixer.Sound("./sounds/Transformer/transformer2.mp3")
+laser_shoot_sound = pygame.mixer.Sound("./sounds/Transformer/LaserShoot.wav")  # 擎天柱发射激光的声音
 
 # 加载背景音乐
-pygame.mixer.music.load("./sounds/background_music.mp3")
+pygame.mixer.music.load("./sounds/background_music3.mp3")
 pygame.mixer.music.play(-1)  # 循环播放背景音乐
 
 # 加载爆炸图像
@@ -165,26 +166,47 @@ def main_game():
                     enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
                                     "type": "optimus_prime1",  # 擎天柱形态1
                                     "image": optimus_prime1,
-                                    "health": 4})
+                                    "health": 2,
+                                    "switch_time": random.randint(3, 6),  # 随机切换时间
+                                    "last_shot_time": time.time()})  # 记录上次射击时间
                     random.choice([transform_sound1, transform_sound2]).play()
                 else:
                     enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
                                     "type": "optimus_prime2",  # 擎天柱形态2
                                     "image": optimus_prime2,
-                                    "health": 4})
+                                    "health": 2,
+                                    "switch_time": random.randint(3, 6),  # 随机切换时间
+                                    "last_shot_time": time.time()})  # 记录上次射击时间
                     random.choice([transform_sound1, transform_sound2]).play()
             else:
                 enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
                                 "type": "regular",
                                 "image": enemy_image})
 
+        # 处理擎天柱随机切换形态
+        for enemy in enemies:
+            if enemy["type"].startswith("optimus_prime"):
+                enemy["switch_time"] -= 1 / 60  # 更新倒计时时间
+                if enemy["switch_time"] <= 0:
+                    if enemy["type"] == "optimus_prime1":
+                        enemy["type"] = "optimus_prime2"
+                        enemy["image"] = optimus_prime2
+                    else:
+                        enemy["type"] = "optimus_prime1"
+                        enemy["image"] = optimus_prime1
+                    enemy["switch_time"] = random.randint(3, 6)  # 重置切换时间
+                    random.choice([transform_sound1, transform_sound2]).play()
+
         # 敌机随机发射子弹
         for enemy in enemies:
             if enemy["type"] == "optimus_prime1":
-                # 擎天柱形态1发射密集的子弹
-                if random.randint(1, 50) == 1:  # 比普通敌机发射子弹更频繁
-                    enemy_bullets.append(pygame.Rect(enemy["rect"].left + 5, enemy["rect"].bottom, 10, 25))  # 更大的子弹
-                    enemy_bullets.append(pygame.Rect(enemy["rect"].right - 5, enemy["rect"].bottom, 10, 25))
+                # 擎天柱形态1发射子弹，每秒一次
+                current_time = time.time()
+                if current_time - enemy["last_shot_time"] >= 1:  # 每1秒发射一次
+                    enemy_bullets.append(pygame.Rect(enemy["rect"].left + 10, enemy["rect"].bottom, 6, 20))  # 威力大一些
+                    enemy_bullets.append(pygame.Rect(enemy["rect"].right - 10, enemy["rect"].bottom, 6, 20))  # 子弹略粗
+                    laser_shoot_sound.play()  # 播放发射子弹的声音
+                    enemy["last_shot_time"] = current_time
             elif enemy["type"] == "regular":
                 # 普通敌机的子弹
                 if random.randint(1, 100) == 1:
@@ -255,7 +277,7 @@ def main_game():
             for missile in missiles[:]:
                 if missile.colliderect(enemy["rect"]):
                     if enemy["type"].startswith("optimus_prime"):
-                        enemy["health"] -= 2  # 导弹对擎天柱的伤害更大
+                        enemy["health"] -= 1  # 导弹对擎天柱造成较大伤害
                         if enemy["health"] <= 0:
                             enemies.remove(enemy)
                             explosion_sound.play()
@@ -364,8 +386,11 @@ def game_over_screen(final_score, high_scores):
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                reset_game()
-                main_game()
+                running = False
+                pygame.mixer.music.stop()
+                # 返回到游戏开始界面
+                import game_start_screen  # 导入游戏开始画面模块并重新启动
+                game_start_screen.main_menu()
 
 reset_game()
 main_game()
