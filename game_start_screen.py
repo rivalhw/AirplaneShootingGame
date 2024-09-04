@@ -48,7 +48,7 @@ else:
     font = pygame.font.SysFont(None, 36)  # 如果未指定字体路径，则使用默认字体
 
 # 菜单选项
-menu_options = ["开始游戏", "退出游戏"]
+menu_options = ["开始游戏", "结束游戏", "退出游戏"]
 selected_option = 0
 
 def draw_menu():
@@ -83,7 +83,10 @@ def main_menu():
                     if selected_option == 0:  # 开始游戏
                         pygame.mixer.music.stop()
                         start_game()  # 调用开始游戏的逻辑
-                    elif selected_option == 1:  # 退出游戏
+                    elif selected_option == 1:  # 结束游戏
+                        pygame.mixer.music.stop()
+                        end_game()  # 调用结束游戏的逻辑
+                    elif selected_option == 2:  # 退出游戏
                         pygame.quit()
                         sys.exit()
 
@@ -92,6 +95,13 @@ def start_game():
     import AirplaneShootingGame  # 这里加载原有的游戏代码文件
     AirplaneShootingGame.reset_game()
     AirplaneShootingGame.main_game()
+
+# 调用结束游戏逻辑，进入片尾
+def end_game():
+    import game_end_screen  # 加载结束游戏画面模块
+    game_end_screen.game_over_screen(120, [300, 250, 200, 150, 100])  # 示例分数与排行榜
+    import game_start_screen  # 返回主菜单
+    game_start_screen.main_menu()
 
 if __name__ == "__main__":
     main_menu()

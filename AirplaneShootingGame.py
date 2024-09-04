@@ -3,6 +3,7 @@ import random
 import time
 import os
 import sys
+import game_end_screen  # 导入游戏结束模块
 
 # 游戏版本号
 GAME_VERSION = "V3.6"
@@ -359,38 +360,8 @@ def main_game():
     # 更新历史最高分
     high_scores = update_high_scores(score)
 
-    # 游戏结束，显示最终得分和最高分榜单
-    game_over_screen(score, high_scores)
-
-def game_over_screen(final_score, high_scores):
-    global running
-    running = True
-    while running:
-        screen.fill(BLACK)
-        game_over_text = font.render("游戏结束", True, WHITE)
-        final_score_text = font.render(f"最终得分: {final_score}", True, WHITE)
-        screen.blit(game_over_text, (width // 2 - 60, height // 2 - 50))
-        screen.blit(final_score_text, (width // 2 - 100, height // 2))
-
-        high_scores_text = font.render("最高分排行榜:", True, WHITE)
-        screen.blit(high_scores_text, (width // 2 - 100, height // 2 + 50))
-        for i, score in enumerate(high_scores):
-            score_text = font.render(f"{i + 1}. {score}", True, WHITE)
-            screen.blit(score_text, (width // 2 - 50, height // 2 + 100 + i * 30))
-
-        pygame.display.flip()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                running = False
-                pygame.mixer.music.stop()
-                # 返回到游戏开始界面
-                import game_start_screen  # 导入游戏开始画面模块并重新启动
-                game_start_screen.main_menu()
+    # 游戏结束，调用游戏结束画面模块
+    game_end_screen.game_over_screen(score, high_scores)
 
 reset_game()
 main_game()
