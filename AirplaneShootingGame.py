@@ -5,7 +5,7 @@ import os
 import sys
 
 # 游戏版本号
-GAME_VERSION = "V3.3"
+GAME_VERSION = "V3.4"
 AUTHOR_NAME = "游戏作者: 伟大的大伟"
 
 # 初始化 Pygame
@@ -30,11 +30,20 @@ player_image = pygame.transform.scale(player_image, (60, 60))
 enemy_image = pygame.image.load("./images/enemy_fighter.png")
 enemy_image = pygame.transform.scale(enemy_image, (60, 60))
 
+# 加载擎天柱图像
+optimus_prime1 = pygame.image.load("./images/Transformers/optimus_prime1.png")
+optimus_prime1 = pygame.transform.scale(optimus_prime1, (60, 60))
+
+optimus_prime2 = pygame.image.load("./images/Transformers/optimus_prime2.png")
+optimus_prime2 = pygame.transform.scale(optimus_prime2, (60, 60))
+
 # 加载音效
 shoot_sound = pygame.mixer.Sound("./sounds/shoot.wav")
 explosion_sound = pygame.mixer.Sound("./sounds/explosion.wav")
 collision_sound = pygame.mixer.Sound("./sounds/collision.wav")
 missile_sound = pygame.mixer.Sound("./sounds/missile.mp3")
+transform_sound1 = pygame.mixer.Sound("./sounds/Transformer/transformer1.mp3")
+transform_sound2 = pygame.mixer.Sound("./sounds/Transformer/transformer2.mp3")
 
 # 加载背景音乐
 pygame.mixer.music.load("./sounds/background_music.mp3")
@@ -151,18 +160,41 @@ def main_game():
 
         # 生成敌机
         if random.randint(1, 60) == 1:
-            enemies.append(pygame.Rect(random.randint(0, width-60), 0, 60, 60))
+            if random.randint(1, 5) == 1:  # 20% 概率生成擎天柱
+                if random.choice([True, False]):  # 随机选择擎天柱的形态
+                    enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
+                                    "type": "optimus_prime1",  # 擎天柱形态1
+                                    "image": optimus_prime1,
+                                    "health": 4})
+                    random.choice([transform_sound1, transform_sound2]).play()
+                else:
+                    enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
+                                    "type": "optimus_prime2",  # 擎天柱形态2
+                                    "image": optimus_prime2,
+                                    "health": 4})
+                    random.choice([transform_sound1, transform_sound2]).play()
+            else:
+                enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
+                                "type": "regular",
+                                "image": enemy_image})
 
-        # 敌机随机发射双发子弹
+        # 敌机随机发射子弹
         for enemy in enemies:
-            if random.randint(1, 100) == 1:
-                enemy_bullets.append(pygame.Rect(enemy.left + 10, enemy.bottom, 6, 15))
-                enemy_bullets.append(pygame.Rect(enemy.right - 16, enemy.bottom, 6, 15))
+            if enemy["type"] == "optimus_prime1":
+                # 擎天柱形态1发射密集的子弹
+                if random.randint(1, 50) == 1:  # 比普通敌机发射子弹更频繁
+                    enemy_bullets.append(pygame.Rect(enemy["rect"].left + 5, enemy["rect"].bottom, 10, 25))  # 更大的子弹
+                    enemy_bullets.append(pygame.Rect(enemy["rect"].right - 5, enemy["rect"].bottom, 10, 25))
+            elif enemy["type"] == "regular":
+                # 普通敌机的子弹
+                if random.randint(1, 100) == 1:
+                    enemy_bullets.append(pygame.Rect(enemy["rect"].left + 10, enemy["rect"].bottom, 6, 15))
+                    enemy_bullets.append(pygame.Rect(enemy["rect"].right - 16, enemy["rect"].bottom, 6, 15))
 
         # 移动敌机
         for enemy in enemies[:]:
-            enemy.y += 2
-            if enemy.top > height:
+            enemy["rect"].y += 2
+            if enemy["rect"].top > height:
                 enemies.remove(enemy)
 
         # 移动敌机子弹
@@ -186,29 +218,56 @@ def main_game():
         # 检测碰撞
         collision_occurred = False
         for enemy in enemies[:]:
-            if player.colliderect(enemy):
+            if player.colliderect(enemy["rect"]):
                 collision_sound.play()
-                enemies.remove(enemy)
+                if enemy["type"].startswith("optimus_prime"):
+                    enemy["health"] -= 1
+                    if enemy["health"] <= 0:
+                        enemies.remove(enemy)
+                        explosion_sound.play()
+                        screen.blit(explosion_image, enemy["rect"].topleft)  # 在敌机位置显示爆炸图片
+                        pygame.display.update()
+                else:
+                    enemies.remove(enemy)
+                    explosion_sound.play()
+                    screen.blit(explosion_image, enemy["rect"].topleft)  # 在敌机位置显示爆炸图片
+                    pygame.display.update()
                 lives -= 1
                 collision_occurred = True
                 break
             for bullet in bullets[:]:
-                if bullet.colliderect(enemy):
-                    enemies.remove(enemy)
-                    bullets.remove(bullet)
-                    score += 10
-                    explosion_sound.play()
-                    screen.blit(explosion_image, enemy.topleft)  # 在敌机位置显示爆炸图片
-                    pygame.display.update()
+                if bullet.colliderect(enemy["rect"]):
+                    if enemy["type"].startswith("optimus_prime"):
+                        enemy["health"] -= 1
+                        if enemy["health"] <= 0:
+                            enemies.remove(enemy)
+                            explosion_sound.play()
+                            screen.blit(explosion_image, enemy["rect"].topleft)  # 在敌机位置显示爆炸图片
+                            pygame.display.update()
+                    else:
+                        enemies.remove(enemy)
+                        bullets.remove(bullet)
+                        score += 10
+                        explosion_sound.play()
+                        screen.blit(explosion_image, enemy["rect"].topleft)  # 在敌机位置显示爆炸图片
+                        pygame.display.update()
                     break
             for missile in missiles[:]:
-                if missile.colliderect(enemy):
-                    enemies.remove(enemy)
-                    missiles.remove(missile)
-                    score += 20
-                    explosion_sound.play()
-                    screen.blit(explosion_image, enemy.topleft)  # 在敌机位置显示爆炸图片
-                    pygame.display.update()
+                if missile.colliderect(enemy["rect"]):
+                    if enemy["type"].startswith("optimus_prime"):
+                        enemy["health"] -= 2  # 导弹对擎天柱的伤害更大
+                        if enemy["health"] <= 0:
+                            enemies.remove(enemy)
+                            explosion_sound.play()
+                            screen.blit(explosion_image, enemy["rect"].topleft)  # 在敌机位置显示爆炸图片
+                            pygame.display.update()
+                    else:
+                        enemies.remove(enemy)
+                        missiles.remove(missile)
+                        score += 20
+                        explosion_sound.play()
+                        screen.blit(explosion_image, enemy["rect"].topleft)  # 在敌机位置显示爆炸图片
+                        pygame.display.update()
                     break
 
         # 检测玩家是否被敌机子弹击中
@@ -237,7 +296,7 @@ def main_game():
             pygame.draw.rect(screen, WHITE, star)
         screen.blit(player_image, player.topleft)
         for enemy in enemies:
-            screen.blit(enemy_image, enemy.topleft)
+            screen.blit(enemy["image"], enemy["rect"].topleft)
         for bullet in bullets:
             pygame.draw.rect(screen, RED, bullet)
         for missile in missiles:
