@@ -162,7 +162,7 @@ def main_game():
 
         # 生成敌机
         if random.randint(1, 60) == 1:
-            if random.randint(1, 5) == 1:  # 20% 概率生成擎天柱
+            if random.randint(1, 10) == 1:  # 10% 概率生成擎天柱
                 if random.choice([True, False]):  # 随机选择擎天柱的形态
                     enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
                                     "type": "optimus_prime1",  # 擎天柱形态1
