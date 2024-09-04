@@ -40,7 +40,7 @@ optimus_prime2 = pygame.transform.scale(optimus_prime2, (60, 60))
 # 加载音效
 shoot_sound = pygame.mixer.Sound("./sounds/shoot.wav")
 explosion_sound = pygame.mixer.Sound("./sounds/explosion.wav")
-collision_sound = pygame.mixer.Sound("./sounds/collision.wav")
+collision_sound = pygame.mixer.Sound("./sounds/Transformer/itwillreturn.mp3")
 missile_sound = pygame.mixer.Sound("./sounds/missile.mp3")
 transform_sound1 = pygame.mixer.Sound("./sounds/Transformer/transformer1.mp3")
 transform_sound2 = pygame.mixer.Sound("./sounds/Transformer/transformer2.mp3")
