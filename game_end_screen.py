@@ -43,6 +43,9 @@ background_surface = pygame.Surface((width, height)).convert()
 background_surface.blit(background_image, (0, 0))
 background_surface.set_alpha(153)  # 设置透明度为60% (153/255)
 
+# 加载结束画面的背景音乐
+pygame.mixer.music.load("./sounds/background_music2.mp3")
+
 # 绘制游戏结束界面
 def draw_game_over_screen(final_score, high_scores):
     screen.fill(BLACK)
@@ -75,6 +78,9 @@ def draw_game_over_screen(final_score, high_scores):
 
 # 游戏结束界面逻辑
 def game_over_screen(final_score, high_scores):
+    # 播放背景音乐
+    pygame.mixer.music.play(-1)  # 循环播放背景音乐
+
     running = True
     while running:
         draw_game_over_screen(final_score, high_scores)
@@ -86,7 +92,7 @@ def game_over_screen(final_score, high_scores):
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 running = False
-                pygame.mixer.music.stop()
+                pygame.mixer.music.stop()  # 停止背景音乐
                 import game_start_screen  # 返回主菜单
                 game_start_screen.main_menu()
 

@@ -6,7 +6,7 @@ import sys
 import game_end_screen  # 导入游戏结束模块
 
 # 游戏版本号
-GAME_VERSION = "V3.6"
+GAME_VERSION = "V3.7"
 AUTHOR_NAME = "游戏作者: 伟大的大伟"
 
 # 初始化 Pygame
