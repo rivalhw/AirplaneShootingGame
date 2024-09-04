@@ -25,6 +25,9 @@ background_y = (height - background_rect.height) // 2
 pygame.mixer.music.load("./sounds/background_music1.mp3")
 pygame.mixer.music.play(-1)  # 循环播放背景音乐
 
+# 加载光标移动声音
+cursor_move_sound = pygame.mixer.Sound("./sounds/dada.wav")
+
 # 颜色定义
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -72,8 +75,10 @@ def main_menu():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_option = (selected_option - 1) % len(menu_options)
+                    cursor_move_sound.play()  # 播放光标移动声音
                 elif event.key == pygame.K_DOWN:
                     selected_option = (selected_option + 1) % len(menu_options)
+                    cursor_move_sound.play()  # 播放光标移动声音
                 elif event.key == pygame.K_RETURN:
                     if selected_option == 0:  # 开始游戏
                         pygame.mixer.music.stop()
