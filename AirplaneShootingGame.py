@@ -3,19 +3,19 @@ import random
 import time
 import os
 import sys
-import game_end_screen  # 导入游戏结束模块
+import game_end_screen
+import game_start_screen  # 导入游戏开始模块
 
 # 游戏版本号
-GAME_VERSION = "V3.7"
+GAME_VERSION = "V3.8"
 AUTHOR_NAME = "游戏作者: 大伟说AI"
 
 # 初始化 Pygame
 pygame.init()
 
-# 设置游戏窗口
-width = 800
-height = 800
-screen = pygame.display.set_mode((width, height))
+# 设置游戏窗口为全屏
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+width, height = screen.get_size()  # 动态获取全屏后的宽高
 pygame.display.set_caption("大伟说AI：太空大战")
 
 # 颜色定义
@@ -57,7 +57,9 @@ explosion_image = pygame.transform.scale(explosion_image, (60, 60))
 
 # 玩家飞机
 player = pygame.Rect(370, 500, 60, 60)
-player_speed = 5
+player_speed_factor = 5  # 控制平滑移动的速度
+player_target_x = player.x  # 目标位置
+player_target_y = player.y  # 目标位置
 
 # 全局变量声明
 missile_count = 10
@@ -67,6 +69,11 @@ enemy_bullets = []
 bullets = []
 score = 0
 lives = 3
+
+# ESC键按下的时间和计数器
+esc_press_time = 0  # 记录上次按下ESC的时间
+esc_press_count = 0  # 记录连续按下ESC的次数
+esc_double_press_threshold = 0.5  # 两次按下的时间阈值，单位为秒
 
 # 字体路径根据操作系统进行选择
 if sys.platform.startswith("darwin"):  # MacOS
@@ -80,16 +87,20 @@ else:
 if font_path:
     font = pygame.font.Font(font_path, 26)
     small_font = pygame.font.Font(font_path, 18)  # 调整后的较小字体
+    large_font = pygame.font.Font(font_path, 72)  # 大字体用于倒计时
+    medium_font = pygame.font.Font(font_path, 48)  # 中等字体用于提示
 else:
     font = pygame.font.SysFont(None, 26)  # 如果未指定字体路径，则使用默认字体
     small_font = pygame.font.SysFont(None, 18)  # 调整后的较小字体
+    large_font = pygame.font.SysFont(None, 72)  # 大字体用于倒计时
+    medium_font = pygame.font.SysFont(None, 48)  # 中等字体用于提示
 
 # 游戏时间
 game_time = 60  # 游戏时间改为60秒
 start_ticks = pygame.time.get_ticks()  # 游戏开始时间
 
 # 星星
-stars = [pygame.Rect(random.randint(0, width-2), random.randint(0, height-2), 2, 2) for _ in range(100)]
+stars = [pygame.Rect(random.randint(0, width - 2), random.randint(0, height - 2), 2, 2) for _ in range(100)]
 
 # 历史最高分文件路径
 high_scores_file = "high_scores.txt"
@@ -128,8 +139,24 @@ def reset_game():
     lives = 3
     score = 0
 
+# 暂停游戏的函数
+def pause_game():
+    paused = True
+    while paused:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                paused = False  # 按任意键继续游戏
+        screen.fill(BLACK)
+        pause_text = medium_font.render("游戏暂停中", True, WHITE)
+        screen.blit(pause_text, (width // 2 - pause_text.get_width() // 2, height // 2))
+        pygame.display.flip()
+        pygame.time.Clock().tick(5)
+
 def main_game():
-    global lives, score, start_ticks, missile_count, running
+    global lives, score, start_ticks, missile_count, running, player_target_x, player_target_y, esc_press_count, esc_press_time
     running = True
     clock = pygame.time.Clock()
 
@@ -142,29 +169,91 @@ def main_game():
                 running = False
                 pygame.quit()
                 sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    # 玩家子弹发射两列
-                    bullets.append(pygame.Rect(player.left + 10, player.top, 6, 15))
-                    bullets.append(pygame.Rect(player.right - 16, player.top, 6, 15))
-                    shoot_sound.play()
-                if event.key == pygame.K_m and missile_count > 0:
-                    missiles.append(pygame.Rect(player.centerx - 5, player.top, 10, 20))  # 玩家导弹
-                    missile_count -= 1
-                    missile_sound.play()
 
-        # 移动玩家飞机
+            # 检查鼠标左键按下
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                bullets.append(pygame.Rect(player.left + 10, player.top, 6, 15))
+                bullets.append(pygame.Rect(player.right - 16, player.top, 6, 15))
+                shoot_sound.play()
+
+            # 检查鼠标移动，更新目标位置
+            if event.type == pygame.MOUSEMOTION:
+                player_target_x = event.pos[0] - player.width // 2
+                player_target_y = event.pos[1] - player.height // 2
+
+        # 检查按键
         keys = pygame.key.get_pressed()
+        if keys[pygame.K_SPACE]:
+            bullets.append(pygame.Rect(player.left + 10, player.top, 6, 15))
+            bullets.append(pygame.Rect(player.right - 16, player.top, 6, 15))
+            shoot_sound.play()
+
+        if keys[pygame.K_m] and missile_count > 0:
+            missiles.append(pygame.Rect(player.centerx - 5, player.top, 10, 20))  # 玩家导弹
+            missile_count -= 1
+            missile_sound.play()
+
+        if keys[pygame.K_ESCAPE]:
+            current_time = time.time()
+            if esc_press_count == 0 or current_time - esc_press_time > esc_double_press_threshold:
+                # 第一次按下或间隔太长，重置计数器
+                esc_press_count = 1
+                esc_press_time = current_time
+                pause_game()  # 暂停游戏
+            else:
+                # 如果两次按下ESC的间隔小于阈值，返回主菜单
+                if current_time - esc_press_time <= esc_double_press_threshold:
+                    esc_press_count = 0  # 重置计数器
+                    pygame.mixer.music.stop()  # 停止背景音乐
+                    game_start_screen.main_menu()  # 返回主菜单
+                    return  # 退出当前游戏循环
+
+        # 移动战机到鼠标或键盘目标位置
         if keys[pygame.K_LEFT] and player.left > 0:
-            player.x -= player_speed
+            player_target_x = player.x - player_speed_factor
         if keys[pygame.K_RIGHT] and player.right < width:
-            player.x += player_speed
+            player_target_x = player.x + player_speed_factor
+        if keys[pygame.K_UP] and player.top > 0:
+            player_target_y = player.y - player_speed_factor
+        if keys[pygame.K_DOWN] and player.bottom < height:
+            player_target_y = player.y + player_speed_factor
+
+        # 平滑移动战机
+        if player.x < player_target_x:
+            player.x += min(player_speed_factor, player_target_x - player.x)
+        elif player.x > player_target_x:
+            player.x -= min(player_speed_factor, player.x - player_target_x)
+
+        if player.y < player_target_y:
+            player.y += min(player_speed_factor, player_target_y - player.y)
+        elif player.y > player_target_y:
+            player.y -= min(player_speed_factor, player.y - player_target_y)
+
+        # 限制战机不能超出屏幕边界
+        if player.x < 0:
+            player.x = 0
+        if player.x > width - player.width:
+            player.x = width - player.width
+        if player.y < 0:
+            player.y = 0
+        if player.y > height - player.height:
+            player.y = height - player.height
+
+        # 限制战机不能超出屏幕边界
+        if player.x < 0:
+            player.x = 0
+        if player.x > width - player.width:
+            player.x = width - player.width
+        if player.y < 0:
+            player.y = 0
+        if player.y > height - player.height:
+            player.y = height - player.height
 
         # 生成敌机
         if random.randint(1, 60) == 1:
             if random.randint(1, 10) == 1:  # 10% 概率生成擎天柱
                 if random.choice([True, False]):  # 随机选择擎天柱的形态
-                    enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
+                    enemies.append({"rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
                                     "type": "optimus_prime1",  # 擎天柱形态1
                                     "image": optimus_prime1,
                                     "health": 2,
@@ -172,7 +261,7 @@ def main_game():
                                     "last_shot_time": time.time()})  # 记录上次射击时间
                     random.choice([transform_sound1, transform_sound2]).play()
                 else:
-                    enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
+                    enemies.append({"rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
                                     "type": "optimus_prime2",  # 擎天柱形态2
                                     "image": optimus_prime2,
                                     "health": 2,
@@ -180,7 +269,7 @@ def main_game():
                                     "last_shot_time": time.time()})  # 记录上次射击时间
                     random.choice([transform_sound1, transform_sound2]).play()
             else:
-                enemies.append({"rect": pygame.Rect(random.randint(0, width-60), 0, 60, 60),
+                enemies.append({"rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
                                 "type": "regular",
                                 "image": enemy_image})
 
@@ -201,15 +290,13 @@ def main_game():
         # 敌机随机发射子弹
         for enemy in enemies:
             if enemy["type"] == "optimus_prime1":
-                # 擎天柱形态1发射子弹，每秒一次
                 current_time = time.time()
                 if current_time - enemy["last_shot_time"] >= 1:  # 每1秒发射一次
-                    enemy_bullets.append(pygame.Rect(enemy["rect"].left + 10, enemy["rect"].bottom, 6, 20))  # 威力大一些
-                    enemy_bullets.append(pygame.Rect(enemy["rect"].right - 10, enemy["rect"].bottom, 6, 20))  # 子弹略粗
+                    enemy_bullets.append(pygame.Rect(enemy["rect"].left + 10, enemy["rect"].bottom, 6, 20))
+                    enemy_bullets.append(pygame.Rect(enemy["rect"].right - 10, enemy["rect"].bottom, 6, 20))
                     laser_shoot_sound.play()  # 播放发射子弹的声音
                     enemy["last_shot_time"] = current_time
             elif enemy["type"] == "regular":
-                # 普通敌机的子弹
                 if random.randint(1, 100) == 1:
                     enemy_bullets.append(pygame.Rect(enemy["rect"].left + 10, enemy["rect"].bottom, 6, 15))
                     enemy_bullets.append(pygame.Rect(enemy["rect"].right - 16, enemy["rect"].bottom, 6, 15))
@@ -306,8 +393,10 @@ def main_game():
             if lives > 0:
                 for i in range(3, 0, -1):
                     screen.fill(BLACK)
-                    countdown_text = font.render(f"游戏恢复中: {i}", True, WHITE)
-                    screen.blit(countdown_text, (width // 2 - 60, height // 2))
+                    recovery_text = medium_font.render("游戏恢复中", True, WHITE)
+                    screen.blit(recovery_text, (width // 2 - recovery_text.get_width() // 2, height // 2 - 100))
+                    countdown_text = large_font.render(str(i), True, RED)
+                    screen.blit(countdown_text, (width // 2 - countdown_text.get_width() // 2, height // 2))
                     pygame.display.flip()
                     time.sleep(1)
             else:
@@ -318,6 +407,7 @@ def main_game():
         for star in stars:
             pygame.draw.rect(screen, WHITE, star)
         screen.blit(player_image, player.topleft)
+
         for enemy in enemies:
             screen.blit(enemy["image"], enemy["rect"].topleft)
         for bullet in bullets:

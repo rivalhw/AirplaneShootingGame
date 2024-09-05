@@ -4,22 +4,29 @@ import sys
 # 初始化 Pygame
 pygame.init()
 
-# 设置游戏窗口
-width = 800
-height = 800
-screen = pygame.display.set_mode((width, height))
+# 设置游戏窗口为全屏
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+width, height = screen.get_size()
 pygame.display.set_caption("大伟说AI：太空大战 - 游戏开始")
 
 # 加载背景图片并保持原比例
 background_image = pygame.image.load("./images/Transformers/background.png").convert()
 background_rect = background_image.get_rect()  # 获取背景图片的原始大小
 
+# 计算背景图的缩放比例，保持宽高比例不变
+scale_factor = min(width / background_rect.width, height / background_rect.height)
+new_width = int(background_rect.width * scale_factor)
+new_height = int(background_rect.height * scale_factor)
+
+# 缩放背景图片并保持原比例
+background_image = pygame.transform.scale(background_image, (new_width, new_height))
+
+# 计算背景图片的居中位置
+background_x = (width - new_width) // 2
+background_y = (height - new_height) // 2
+
 # 设置透明度为80%（204/255）
 background_image.set_alpha(204)
-
-# 计算背景图绘制的起始位置，保持居中且不变形
-background_x = (width - background_rect.width) // 2
-background_y = (height - background_rect.height) // 2
 
 # 加载背景音乐
 pygame.mixer.music.load("./sounds/background_music1.mp3")
@@ -48,12 +55,12 @@ else:
     font = pygame.font.SysFont(None, 36)  # 如果未指定字体路径，则使用默认字体
 
 # 菜单选项
-menu_options = ["开始游戏", "结束游戏", "退出游戏"]
+menu_options = ["开始游戏", "荣誉榜", "退出游戏"]
 selected_option = 0
 
 def draw_menu():
     screen.fill(BLACK)  # 背景为黑色
-    screen.blit(background_image, (background_x, background_y))  # 绘制背景图片，保持原比例
+    screen.blit(background_image, (background_x, background_y))  # 绘制背景图片，保持原比例并居中
     for i, option in enumerate(menu_options):
         if i == selected_option:
             label = font.render(option, True, RED)
@@ -83,7 +90,7 @@ def main_menu():
                     if selected_option == 0:  # 开始游戏
                         pygame.mixer.music.stop()
                         start_game()  # 调用开始游戏的逻辑
-                    elif selected_option == 1:  # 结束游戏
+                    elif selected_option == 1:  # 荣誉榜
                         pygame.mixer.music.stop()
                         end_game()  # 调用结束游戏的逻辑
                     elif selected_option == 2:  # 退出游戏

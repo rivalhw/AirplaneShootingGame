@@ -4,11 +4,12 @@ import sys
 # 初始化 Pygame
 pygame.init()
 
-# 设置游戏窗口大小
-width = 800
-height = 800
-screen = pygame.display.set_mode((width, height))
+# 设置全屏模式
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 pygame.display.set_caption("大伟说AI：太空大战 - 游戏结束")
+
+# 获取全屏窗口的宽高
+width, height = screen.get_size()
 
 # 颜色定义
 WHITE = (255, 255, 255)
@@ -34,25 +35,34 @@ else:
     score_font = pygame.font.SysFont(None, 36)
     prompt_font = pygame.font.SysFont(None, 28)
 
-# 加载背景图片
+# 加载背景图片并保持比例
 background_image = pygame.image.load("./images/Transformers/end_background.png").convert()
-background_image = pygame.transform.scale(background_image, (width, height))
+background_rect = background_image.get_rect()
+
+# 计算保持比例缩放的尺寸
+scale_factor = min(width / background_rect.width, height / background_rect.height)
+new_width = int(background_rect.width * scale_factor)
+new_height = int(background_rect.height * scale_factor)
+background_image = pygame.transform.scale(background_image, (new_width, new_height))
 
 # 创建临时表面用于调整透明度
-background_surface = pygame.Surface((width, height)).convert()
+background_surface = pygame.Surface((new_width, new_height)).convert()
 background_surface.blit(background_image, (0, 0))
 background_surface.set_alpha(153)  # 设置透明度为60% (153/255)
 
 # 加载结束画面的背景音乐
 pygame.mixer.music.load("./sounds/background_music2.mp3")
 
+# 加载按键音效
+click_sound = pygame.mixer.Sound("./sounds/click.wav")
+
 # 绘制游戏结束界面
 def draw_game_over_screen(final_score, high_scores):
     screen.fill(BLACK)
-    
+
     # 绘制背景
-    screen.blit(background_surface, (0, 0))  # 使用带透明度的表面作为背景
-    
+    screen.blit(background_surface, ((width - new_width) // 2, (height - new_height) // 2))  # 保持比例居中绘制背景
+
     # 绘制标题
     title_text = title_font.render("游戏结束", True, GOLD)
     screen.blit(title_text, (width // 2 - title_text.get_width() // 2, 100))
@@ -64,7 +74,7 @@ def draw_game_over_screen(final_score, high_scores):
     # 显示最高分榜单
     high_scores_text = score_font.render("最高分排行榜:", True, GOLD)
     screen.blit(high_scores_text, (width // 2 - high_scores_text.get_width() // 2, 300))
-    
+
     # 绘制排行榜分数
     for i, score in enumerate(high_scores):
         score_text = score_font.render(f"{i + 1}. {score}", True, WHITE)
@@ -91,6 +101,8 @@ def game_over_screen(final_score, high_scores):
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
+                # 播放按键音效
+                click_sound.play()
                 running = False
                 pygame.mixer.music.stop()  # 停止背景音乐
                 import game_start_screen  # 返回主菜单
