@@ -8,7 +8,7 @@ pygame.init()
 width = 800
 height = 800
 screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("太空大战 - 游戏开始")
+pygame.display.set_caption("大伟说AI：太空大战 - 游戏开始")
 
 # 加载背景图片并保持原比例
 background_image = pygame.image.load("./images/Transformers/background.png").convert()

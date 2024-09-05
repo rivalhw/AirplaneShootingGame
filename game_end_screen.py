@@ -8,7 +8,7 @@ pygame.init()
 width = 800
 height = 800
 screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("太空大战 - 游戏结束")
+pygame.display.set_caption("大伟说AI：太空大战 - 游戏结束")
 
 # 颜色定义
 WHITE = (255, 255, 255)

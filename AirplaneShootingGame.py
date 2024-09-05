@@ -7,7 +7,7 @@ import game_end_screen  # 导入游戏结束模块
 
 # 游戏版本号
 GAME_VERSION = "V3.7"
-AUTHOR_NAME = "游戏作者: 伟大的大伟"
+AUTHOR_NAME = "游戏作者: 大伟说AI"
 
 # 初始化 Pygame
 pygame.init()
@@ -16,7 +16,7 @@ pygame.init()
 width = 800
 height = 800
 screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("太空大战")
+pygame.display.set_caption("大伟说AI：太空大战")
 
 # 颜色定义
 WHITE = (255, 255, 255)
