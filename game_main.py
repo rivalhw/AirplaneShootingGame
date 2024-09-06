@@ -20,6 +20,10 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
     last_shot_time = 0  # 初始化上次发射子弹的时间
     last_save_time = time.time()  # 初始化上次保存游戏时长的时间
 
+    # 初始化玩家目标位置
+    player_target_x = player.x  
+    player_target_y = player.y  
+
     if remaining_time <= 0:
         # 今日游戏时间已满，显示提示并退出
         screen.fill(pygame.Color("black"))
