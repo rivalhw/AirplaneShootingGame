@@ -1,13 +1,10 @@
 import pygame
 import sys
+import game_init  # 导入初始化模块
+import game_main  # 新增导入游戏主逻辑
 
-# 初始化 Pygame
-pygame.init()
-
-# 设置游戏窗口为全屏
-screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-width, height = screen.get_size()
-pygame.display.set_caption("大伟说AI：太空大战 - 游戏开始")
+# 初始化游戏
+screen, width, height = game_init.initialize_game()
 
 # 加载背景图片并保持原比例
 background_image = pygame.image.load("./images/Transformers/background.png").convert()
@@ -40,19 +37,8 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 
-# 字体路径根据操作系统进行选择
-if sys.platform.startswith("darwin"):  # MacOS
-    font_path = "/System/Library/Fonts/STHeiti Medium.ttc"
-elif sys.platform.startswith("win"):  # Windows
-    font_path = "C:/Windows/Fonts/simhei.ttf"  # 例如，使用SimHei字体
-else:
-    font_path = None  # 其他系统不指定字体路径
-
-# 字体设置
-if font_path:
-    font = pygame.font.Font(font_path, 36)
-else:
-    font = pygame.font.SysFont(None, 36)  # 如果未指定字体路径，则使用默认字体
+# 字体加载
+font, small_font, large_font, medium_font = game_init.load_fonts()
 
 # 菜单选项
 menu_options = ["开始游戏", "荣誉榜", "退出游戏"]
@@ -99,9 +85,30 @@ def main_menu():
 
 # 加载并运行原先的游戏代码
 def start_game():
-    import AirplaneShootingGame  # 这里加载原有的游戏代码文件
-    AirplaneShootingGame.reset_game()
-    AirplaneShootingGame.main_game()
+    import AirplaneShootingGame
+    AirplaneShootingGame.reset_game()  # 调用游戏重置函数
+    game_main.main_game(  # 直接调用主游戏逻辑
+        AirplaneShootingGame.screen,
+        AirplaneShootingGame.width,
+        AirplaneShootingGame.height,
+        AirplaneShootingGame.font,
+        AirplaneShootingGame.small_font,
+        AirplaneShootingGame.medium_font,
+        AirplaneShootingGame.large_font,
+        AirplaneShootingGame.sounds,
+        AirplaneShootingGame.images,
+        AirplaneShootingGame.player,
+        AirplaneShootingGame.player_speed_factor,
+        AirplaneShootingGame.missile_count,
+        AirplaneShootingGame.missiles,
+        AirplaneShootingGame.enemies,
+        AirplaneShootingGame.enemy_bullets,
+        AirplaneShootingGame.bullets,
+        AirplaneShootingGame.score,
+        AirplaneShootingGame.lives,
+        AirplaneShootingGame.stars,
+        AirplaneShootingGame.game_time
+    )
 
 # 调用结束游戏逻辑，进入片尾
 def end_game():

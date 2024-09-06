@@ -19,21 +19,21 @@ GOLD = (255, 215, 0)
 
 # 字体路径根据操作系统进行选择
 if sys.platform.startswith("darwin"):  # MacOS
-    font_path = "/System/Library/Fonts/STHeiti Medium.ttc"
+    font_path = "/System/Library/Fonts/PingFang.ttc"  # 支持中文的字体
 elif sys.platform.startswith("win"):  # Windows
-    font_path = "C:/Windows/Fonts/simhei.ttf"  # 例如，使用SimHei字体
+    font_path = "C:/Windows/Fonts/simhei.ttf"  # 使用黑体 SimHei 支持中文
 else:
-    font_path = None  # 其他系统不指定字体路径
+    font_path = None  # 其他系统可以选择其他支持中文的字体
 
 # 字体设置
 if font_path:
     title_font = pygame.font.Font(font_path, 48)  # 标题字体
-    score_font = pygame.font.Font(font_path, 36)  # 分数字体
+    score_font = pygame.font.Font(font_path, 36)  # 分数字体，支持中文
     prompt_font = pygame.font.Font(font_path, 28)  # 提示字体
 else:
-    title_font = pygame.font.SysFont(None, 48)
-    score_font = pygame.font.SysFont(None, 36)
-    prompt_font = pygame.font.SysFont(None, 28)
+    title_font = pygame.font.SysFont("Arial Unicode MS", 48)  # 使用 Arial Unicode MS 字体
+    score_font = pygame.font.SysFont("Arial Unicode MS", 36)
+    prompt_font = pygame.font.SysFont("Arial Unicode MS", 28)
 
 # 加载背景图片并保持比例
 background_image = pygame.image.load("./images/Transformers/end_background.png").convert()
@@ -71,14 +71,15 @@ def draw_game_over_screen(final_score, high_scores):
     final_score_text = score_font.render(f"最终得分: {final_score}", True, WHITE)
     screen.blit(final_score_text, (width // 2 - final_score_text.get_width() // 2, 200))
 
-    # 显示最高分榜单
+    # 显示最高分排行榜
     high_scores_text = score_font.render("最高分排行榜:", True, GOLD)
     screen.blit(high_scores_text, (width // 2 - high_scores_text.get_width() // 2, 300))
 
     # 绘制排行榜分数
     for i, score in enumerate(high_scores):
-        score_text = score_font.render(f"{i + 1}. {score}", True, WHITE)
-        screen.blit(score_text, (width // 2 - score_text.get_width() // 2, 350 + i * 40))
+        score_text = f"{i + 1}. {score}"
+        score_surface = score_font.render(score_text, True, WHITE)
+        screen.blit(score_surface, (width // 2 - score_surface.get_width() // 2, 350 + i * 40))
 
     # 显示提示信息
     prompt_text = prompt_font.render("按任意键返回主菜单", True, RED)
