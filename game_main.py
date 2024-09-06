@@ -4,35 +4,49 @@ import time
 import game_end_screen
 import game_resources
 import game_start_screen
+import play_time  # 导入每日游戏时间管理
 import game_pause  # 导入暂停功能
 import game_explosion  # 导入爆炸模块
+from datetime import datetime
 
 # 游戏版本号
 GAME_VERSION = "V3.8"
 AUTHOR_NAME = "游戏作者: 大伟说AI"
 
-
 def main_game(screen, width, height, font, small_font, medium_font, large_font, sounds, images, player, player_speed_factor, missile_count, missiles, enemies, enemy_bullets, bullets, score, lives, stars, game_time):
     start_ticks = pygame.time.get_ticks()  # 游戏开始时间
-    player_target_x = player.x  # 玩家目标位置X
-    player_target_y = player.y  # 玩家目标位置Y
-    esc_press_time = 0  # ESC键按下的时间
-    esc_press_count = 0  # ESC键按下的次数
-    esc_double_press_threshold = 0.5  # 两次按ESC键之间的最大间隔时间
-    last_shot_time = 0  # 上次发射子弹的时间
-    shot_interval = 0.2  # 发射子弹的间隔时间，单位秒
+    played_time = play_time.read_played_time()  # 获取今天已玩时间
+    remaining_time = play_time.max_daily_time - played_time  # 计算剩余时间
+    last_shot_time = 0  # 初始化上次发射子弹的时间
+    last_save_time = time.time()  # 初始化上次保存游戏时长的时间
 
-    running = True
+    if remaining_time <= 0:
+        # 今日游戏时间已满，显示提示并退出
+        screen.fill(pygame.Color("black"))
+        alert_text = large_font.render("今日游戏时间已满，请明日再来！", True, pygame.Color("red"))
+        screen.blit(alert_text, (width // 2 - alert_text.get_width() // 2, height // 2))
+        pygame.display.flip()
+        time.sleep(3)  # 显示3秒钟的提示
+        return
+
     clock = pygame.time.Clock()
+    running = True
+    start_time = time.time()  # 记录游戏开始时间
 
     # 在游戏开始时加载爆炸帧
     explosion_frames = game_explosion.load_explosion_frames()
     active_explosions = []  # 用于跟踪当前活动的爆炸动画 [(x, y, start_time)]
 
     while running:
-        seconds = (pygame.time.get_ticks() - start_ticks) / 1000  # 计算已过去的时间
-        time_left = max(0, game_time - int(seconds))  # 剩余时间
         current_time = time.time()
+        elapsed_time = current_time - start_time  # 计算游戏已玩的时间
+        total_played_time = played_time + int(elapsed_time)  # 总已玩时间
+        remaining_time = max(0, play_time.max_daily_time - total_played_time)  # 计算剩余时间
+
+        # 每隔30秒保存游戏时长到本地文件
+        if current_time - last_save_time >= 30:
+            play_time.save_played_time(total_played_time)
+            last_save_time = current_time
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -54,7 +68,7 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
         # 检查按键
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE]:
-            if current_time - last_shot_time >= shot_interval:  # 检查是否间隔超过1秒
+            if current_time - last_shot_time >= 0.2:  # 子弹发射间隔为0.2秒
                 bullets.append(pygame.Rect(player.left + 10, player.top, 6, 15))
                 bullets.append(pygame.Rect(player.right - 16, player.top, 6, 15))
                 sounds["shoot"].play()
@@ -66,16 +80,7 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
             sounds["missile"].play()
 
         if keys[pygame.K_ESCAPE]:
-            if esc_press_count == 0 or current_time - esc_press_time > esc_double_press_threshold:
-                esc_press_count = 1
-                esc_press_time = current_time
-                game_pause.pause_game(screen, medium_font, width, height)  # 暂停游戏
-            else:
-                if current_time - esc_press_time <= esc_double_press_threshold:
-                    esc_press_count = 0  # 重置计数器
-                    pygame.mixer.music.stop()  # 停止背景音乐
-                    game_start_screen.main_menu()  # 返回主菜单
-                    return  # 退出当前游戏循环
+            game_pause.pause_game(screen, medium_font, width, height)  # 暂停游戏
 
         # 移动战机到鼠标或键盘目标位置
         if keys[pygame.K_LEFT] and player.left > 0:
@@ -278,9 +283,11 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
         lives_text = font.render(f"生命: {lives}", True, pygame.Color("white"))
         screen.blit(lives_text, (10, 90))
 
-        # 显示倒计时
-        timer_text = font.render(f"时间: {time_left}秒", True, pygame.Color("white"))
-        screen.blit(timer_text, (width - 200, 10))
+        # 显示今日已玩时间和剩余时间，右上角
+        played_time_text = small_font.render(f"今日已玩时间: {total_played_time // 60}分{total_played_time % 60}秒", True, pygame.Color("white"))
+        remaining_time_text = small_font.render(f"今日剩余时间: {remaining_time // 60}分{remaining_time % 60}秒", True, pygame.Color("white"))
+        screen.blit(played_time_text, (width - 220, 10))
+        screen.blit(remaining_time_text, (width - 220, 40))
 
         # 显示版本号和开发者信息
         version_text = small_font.render(f"版本: {GAME_VERSION}", True, pygame.Color("white"))
@@ -296,10 +303,19 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
         pygame.display.flip()
 
         # 检查游戏结束条件
-        if lives <= 0 or time_left <= 0:
+        if lives <= 0 or remaining_time <= 0:
             running = False
+            if remaining_time <= 0:
+                screen.fill(pygame.Color("black"))
+                alert_text = large_font.render("今日游戏时间已满，请明日再来！", True, pygame.Color("red"))
+                screen.blit(alert_text, (width // 2 - alert_text.get_width() // 2, height // 2))
+                pygame.display.flip()
+                time.sleep(3)  # 显示3秒钟的提示
 
         clock.tick(60)
+
+    # 保存已玩时间
+    play_time.save_played_time(total_played_time)
 
     # 更新历史最高分
     high_scores = game_resources.update_high_scores(score)
