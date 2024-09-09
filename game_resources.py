@@ -51,7 +51,7 @@ def load_images():
         "explosion": explosion_image,
     }
 
-# 加载所有音效资源
+
 def load_sounds():
     shoot_sound = pygame.mixer.Sound("./sounds/shoot.wav")
     explosion_sound = pygame.mixer.Sound("./sounds/explosion.wav")
@@ -60,6 +60,7 @@ def load_sounds():
     transform_sound1 = pygame.mixer.Sound("./sounds/Transformer/transformer1.mp3")
     transform_sound2 = pygame.mixer.Sound("./sounds/Transformer/transformer2.mp3")
     laser_shoot_sound = pygame.mixer.Sound("./sounds/Transformer/LaserShoot.wav")
+    nuclear_sound = pygame.mixer.Sound("./sounds/nuclear.mp3")  # 预加载核弹音效
 
     return {
         "shoot": shoot_sound,
@@ -69,6 +70,7 @@ def load_sounds():
         "transform1": transform_sound1,
         "transform2": transform_sound2,
         "laser_shoot": laser_shoot_sound,
+        "nuclear": nuclear_sound  # 加载的核弹音效
     }
 
 # 加载背景音乐

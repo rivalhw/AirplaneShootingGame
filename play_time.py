@@ -5,8 +5,8 @@ from datetime import datetime
 # 文件路径，用于存储每日的游戏时长和日期
 PLAY_TIME_FILE = "play_time.json"
 
-# 每天最多可以玩20分钟（1200秒）
-max_daily_time = 1200
+# 每天最多可以玩10分钟（600秒）
+max_daily_time = 600
 
 # 读取本地文件中已存储的游戏时间
 def read_played_time():

@@ -7,13 +7,76 @@ import game_start_screen
 import play_time  # 导入每日游戏时间管理
 import game_pause  # 导入暂停功能
 import game_explosion  # 导入爆炸模块
+import os
 from datetime import datetime
+import cv2  # 用于处理核弹视频播放
+import threading
 
 # 游戏版本号
-GAME_VERSION = "V3.8"
+GAME_VERSION = "V3.9"
 AUTHOR_NAME = "游戏作者: 大伟说AI"
 
+# 初始化核弹数量
+nuclear_count = 3  # 每局3枚核弹
+nuke_fired_time = None  # 核弹发射后的时间，用于暂停敌机生成
+
+def play_nuclear_explosion(screen, width, height, sounds, stop_game_event):
+    # 播放核弹音效
+    pygame.mixer.Sound("./sounds/nuclear.mp3").play()
+
+    # 停止游戏逻辑
+    stop_game_event.set()  # 设置暂停事件，通知游戏逻辑停止
+
+    # 清空事件队列，确保没有积压的事件
+    pygame.event.clear()
+
+    # 显示倒计时 9 到 1
+    for i in range(9, 0, -1):
+        screen.fill(pygame.Color("black"))
+        countdown_text = pygame.font.Font(None, 72).render(str(i), True, pygame.Color("red"))
+        screen.blit(countdown_text, (width // 2 - countdown_text.get_width() // 2, height // 2))
+        pygame.display.flip()
+        time.sleep(1)  # 每秒更新一次倒计时
+
+        # 在倒计时期间，忽略所有输入事件
+        pygame.event.clear()
+
+    # 核弹倒计时结束后，播放核爆炸动画
+    play_nuclear_animation(screen, width, height)
+
+    # 核弹爆炸结束后恢复游戏逻辑
+    stop_game_event.clear()  # 清除暂停事件，恢复游戏逻辑
+
+
+def play_nuclear_animation(screen, width, height):
+    # 加载核弹爆炸画面，从 frame_1.png 到 frame_660.png
+    explosion_folder = './images/nuclear'
+    total_frames = 300  # 总帧数
+    frame_duration = 33  # 每帧33毫秒 (约30帧每秒)
+
+    # 播放核弹爆炸动画
+    for frame_num in range(31, total_frames + 1):
+        frame_path = os.path.join(explosion_folder, f'frame_{frame_num}.png')
+        if os.path.exists(frame_path):
+            frame_image = pygame.image.load(frame_path)
+            frame_image = pygame.transform.scale(frame_image, (width, height))  # 全屏显示爆炸帧
+            screen.blit(frame_image, (0, 0))
+            pygame.display.flip()
+            pygame.time.delay(frame_duration)  # 每帧持续33毫秒
+
+            # 在爆炸动画播放期间，清空并忽略所有事件
+            pygame.event.clear()
+        else:
+            print(f"Frame {frame_num} not found!")
+            break
+
+# 游戏主逻辑
 def main_game(screen, width, height, font, small_font, medium_font, large_font, sounds, images, player, player_speed_factor, missile_count, missiles, enemies, enemy_bullets, bullets, score, lives, stars, game_time):
+    global nuclear_count, nuke_fired_time  # 使用全局变量来管理核弹数量
+    stop_game_event = threading.Event()  # 用于控制游戏的暂停和恢复
+    esc_press_time = None  # 用于记录ESC键按下的时间
+    double_esc_interval = 0.5  # 连续按下两次ESC键的最大间隔时间（秒）
+
     start_ticks = pygame.time.get_ticks()  # 游戏开始时间
     played_time = play_time.read_played_time()  # 获取今天已玩时间
     remaining_time = play_time.max_daily_time - played_time  # 计算剩余时间
@@ -64,13 +127,41 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
                 bullets.append(pygame.Rect(player.right - 16, player.top, 6, 15))
                 sounds["shoot"].play()
 
+            # 检查鼠标右键按下，触发核弹效果
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and nuclear_count > 0:
+                # 播放核弹效果并继续游戏直到倒计时开始
+                play_nuclear_explosion(screen, width, height, sounds, stop_game_event)
+                # 核弹数量减1
+                nuclear_count -= 1
+
             # 检查鼠标移动，更新目标位置
             if event.type == pygame.MOUSEMOTION:
                 player_target_x = event.pos[0] - player.width // 2
                 player_target_y = event.pos[1] - player.height // 2
 
+        # 游戏暂停时不处理游戏逻辑
+        if stop_game_event.is_set():
+            pygame.display.flip()  # 仅刷新屏幕，停止其他逻辑
+            continue
+
         # 检查按键
         keys = pygame.key.get_pressed()
+
+        # ESC键暂停和退出逻辑
+        if keys[pygame.K_ESCAPE]:
+            if esc_press_time is None:
+                esc_press_time = time.time()  # 记录第一次按下的时间
+                game_pause.pause_game(screen, medium_font, width, height)  # 第一次按ESC时，暂停游戏
+            else:
+                # 检查第二次按ESC键的时间差
+                if time.time() - esc_press_time <= double_esc_interval:
+                    running = False  # 第二次按ESC键，退出游戏
+                    game_start_screen.main_menu()  # 返回到游戏主菜单
+                esc_press_time = None  # 重置esc_press_time
+        else:
+            esc_press_time = None  # 如果ESC键没有按下，重置记录
+
+
         if keys[pygame.K_SPACE]:
             if current_time - last_shot_time >= 0.2:  # 子弹发射间隔为0.2秒
                 bullets.append(pygame.Rect(player.left + 10, player.top, 6, 15))
@@ -117,36 +208,38 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
         if player.y > height - player.height:
             player.y = height - player.height
 
-        # 生成敌机
-        if random.randint(1, 60) == 1:
-            if random.randint(1, 10) == 1:  # 10% 概率生成擎天柱
-                if random.choice([True, False]):  # 随机选择擎天柱的形态
-                    enemies.append({
-                        "rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
-                        "type": "optimus_prime1",
-                        "image": images["optimus_prime1"],
-                        "health": 2,
-                        "switch_time": random.randint(3, 6),  # 随机切换时间
-                        "last_shot_time": time.time(),
-                        "horizontal_speed": random.choice([-2, 2])  # 随机设置左右移动速度
-                    })
+        # 核弹发射后5-8秒内不生成敌机
+        if nuke_fired_time is None or (time.time() - nuke_fired_time > 8):  # 确保随机暂停时间在5-8秒内
+            # 正常生成敌机的逻辑
+            if random.randint(1, 60) == 1:
+                if random.randint(1, 10) == 1:  # 10% 概率生成擎天柱
+                    if random.choice([True, False]):  # 随机选择擎天柱的形态
+                        enemies.append({
+                            "rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
+                            "type": "optimus_prime1",
+                            "image": images["optimus_prime1"],
+                            "health": 2,
+                            "switch_time": random.randint(3, 6),  # 随机切换时间
+                            "last_shot_time": time.time(),
+                            "horizontal_speed": random.choice([-2, 2])  # 随机设置左右移动速度
+                        })
+                    else:
+                        enemies.append({
+                            "rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
+                            "type": "optimus_prime2",
+                            "image": images["optimus_prime2"],
+                            "health": 2,
+                            "switch_time": random.randint(3, 6),
+                            "last_shot_time": time.time(),
+                            "horizontal_speed": random.choice([-2, 2])  # 随机设置左右移动速度
+                        })
                 else:
                     enemies.append({
                         "rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
-                        "type": "optimus_prime2",
-                        "image": images["optimus_prime2"],
-                        "health": 2,
-                        "switch_time": random.randint(3, 6),
-                        "last_shot_time": time.time(),
-                        "horizontal_speed": random.choice([-2, 2])  # 随机设置左右移动速度
+                        "type": "regular",
+                        "image": images["enemy"],
+                        "horizontal_speed": random.choice([-2, 2])  # 常规敌机左右移动速度
                     })
-            else:
-                enemies.append({
-                    "rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
-                    "type": "regular",
-                    "image": images["enemy"],
-                    "horizontal_speed": random.choice([-2, 2])  # 常规敌机左右移动速度
-                })
 
         # 处理擎天柱随机切换形态
         for enemy in enemies:
@@ -288,6 +381,10 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
         for bullet in enemy_bullets:
             pygame.draw.rect(screen, pygame.Color("green"), bullet)  # 敌机子弹为绿色
 
+        # 显示核弹数量
+        nuclear_text = font.render(f"核弹: {nuclear_count}", True, pygame.Color("white"))
+        screen.blit(nuclear_text, (10, 130))
+
         # 显示积分
         score_text = font.render(f"得分: {score}", True, pygame.Color("white"))
         screen.blit(score_text, (10, 10))
@@ -331,7 +428,7 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
 
         clock.tick(60)
 
-    # 保存已玩时间
+   # 保存已玩时间
     play_time.save_played_time(total_played_time)
 
     # 更新历史最高分
