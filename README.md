@@ -5,6 +5,9 @@ A fun airplane shooting game designed for children, featuring both friendly and 
 
 一款适合儿童娱乐的打飞机游戏，分为我方和敌方战机，控制光标左右移动战机，空格键发射导弹，被敌方击中或被撞则游戏结束。
 
+AirplaneShootingGame V3.9 screenshot 
+[![frame-480.png](https://i.postimg.cc/9M3XBSDp/frame-480.png)](https://postimg.cc/2qwfk0Fb)
+
 AirplaneShootingGame V3.8 screenshot
 [![v3-8.png](https://i.postimg.cc/BQMjcDZP/v3-8.png)](https://postimg.cc/hfQ4KXdK)
 
