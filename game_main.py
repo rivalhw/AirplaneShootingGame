@@ -121,25 +121,32 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
         if random.randint(1, 60) == 1:
             if random.randint(1, 10) == 1:  # 10% 概率生成擎天柱
                 if random.choice([True, False]):  # 随机选择擎天柱的形态
-                    enemies.append({"rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
-                                    "type": "optimus_prime1",  # 擎天柱形态1
-                                    "image": images["optimus_prime1"],
-                                    "health": 2,
-                                    "switch_time": random.randint(3, 6),  # 随机切换时间
-                                    "last_shot_time": time.time()})  # 记录上次射击时间
-                    random.choice([sounds["transform1"], sounds["transform2"]]).play()
+                    enemies.append({
+                        "rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
+                        "type": "optimus_prime1",
+                        "image": images["optimus_prime1"],
+                        "health": 2,
+                        "switch_time": random.randint(3, 6),  # 随机切换时间
+                        "last_shot_time": time.time(),
+                        "horizontal_speed": random.choice([-2, 2])  # 随机设置左右移动速度
+                    })
                 else:
-                    enemies.append({"rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
-                                    "type": "optimus_prime2",  # 擎天柱形态2
-                                    "image": images["optimus_prime2"],
-                                    "health": 2,
-                                    "switch_time": random.randint(3, 6),  # 随机切换时间
-                                    "last_shot_time": time.time()})  # 记录上次射击时间
-                    random.choice([sounds["transform1"], sounds["transform2"]]).play()
+                    enemies.append({
+                        "rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
+                        "type": "optimus_prime2",
+                        "image": images["optimus_prime2"],
+                        "health": 2,
+                        "switch_time": random.randint(3, 6),
+                        "last_shot_time": time.time(),
+                        "horizontal_speed": random.choice([-2, 2])  # 随机设置左右移动速度
+                    })
             else:
-                enemies.append({"rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
-                                "type": "regular",
-                                "image": images["enemy"]})
+                enemies.append({
+                    "rect": pygame.Rect(random.randint(0, width - 60), 0, 60, 60),
+                    "type": "regular",
+                    "image": images["enemy"],
+                    "horizontal_speed": random.choice([-2, 2])  # 常规敌机左右移动速度
+                })
 
         # 处理擎天柱随机切换形态
         for enemy in enemies:
@@ -168,9 +175,15 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
                     enemy_bullets.append(pygame.Rect(enemy["rect"].left + 10, enemy["rect"].bottom, 6, 15))
                     enemy_bullets.append(pygame.Rect(enemy["rect"].right - 16, enemy["rect"].bottom, 6, 15))
 
-        # 移动敌机
+        # 移动敌机（新增左右移动）
         for enemy in enemies[:]:
             enemy["rect"].y += 2
+            enemy["rect"].x += enemy["horizontal_speed"]  # 水平移动
+
+            # 如果敌机碰到屏幕边缘，则反向水平速度
+            if enemy["rect"].left <= 0 or enemy["rect"].right >= width:
+                enemy["horizontal_speed"] *= -1  # 反转移动方向
+
             if enemy["rect"].top > height:
                 enemies.remove(enemy)
 
