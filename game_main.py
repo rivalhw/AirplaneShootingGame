@@ -9,7 +9,6 @@ import game_pause  # 导入暂停功能
 import game_explosion  # 导入爆炸模块
 import os
 from datetime import datetime
-import cv2  # 用于处理核弹视频播放
 import threading
 
 # 游戏版本号
@@ -17,11 +16,11 @@ GAME_VERSION = "V3.9"
 AUTHOR_NAME = "游戏作者: 大伟说AI"
 
 # 初始化核弹数量
-nuclear_count = 3  # 每局3枚核弹
+nuclear_count = 2  # 每局2枚核弹
 nuke_fired_time = None  # 核弹发射后的时间，用于暂停敌机生成
 
 def play_nuclear_explosion(screen, width, height, sounds, stop_game_event):
-    # 播放核弹音效
+    global nuke_fired_time  # 声明全局变量
     pygame.mixer.Sound("./sounds/nuclear.mp3").play()
 
     # 停止游戏逻辑
@@ -30,8 +29,8 @@ def play_nuclear_explosion(screen, width, height, sounds, stop_game_event):
     # 清空事件队列，确保没有积压的事件
     pygame.event.clear()
 
-    # 显示倒计时 9 到 1
-    for i in range(9, 0, -1):
+    # 显示倒计时 5 到 1
+    for i in range(5, 0, -1):
         screen.fill(pygame.Color("black"))
         countdown_text = pygame.font.Font(None, 72).render(str(i), True, pygame.Color("red"))
         screen.blit(countdown_text, (width // 2 - countdown_text.get_width() // 2, height // 2))
@@ -44,18 +43,32 @@ def play_nuclear_explosion(screen, width, height, sounds, stop_game_event):
     # 核弹倒计时结束后，播放核爆炸动画
     play_nuclear_animation(screen, width, height)
 
+    # 记录核弹发射的时间和敌机生成暂停的时间
+    nuke_fired_time = time.time()  # 记录核弹发射的时间
+    # nuke_pause_duration = random.randint(25, 35)  # 随机暂停 10 到 15 秒
+    nuke_pause_duration = 35
+    print("nuke_pause_duration:"+str(nuke_pause_duration) +"秒")
     # 核弹爆炸结束后恢复游戏逻辑
     stop_game_event.clear()  # 清除暂停事件，恢复游戏逻辑
+    return nuke_pause_duration
 
 
 def play_nuclear_animation(screen, width, height):
     # 加载核弹爆炸画面，从 frame_1.png 到 frame_660.png
     explosion_folder = './images/nuclear'
-    total_frames = 300  # 总帧数
+
+    start_nuclear_flame = random.randint(31, 48)
+    print("start_nuclear_flame:"+str(start_nuclear_flame))
+
+    total_nuclear_flame = random.randint(300, 660)
+    print("total_nuclear_flame:"+str(total_nuclear_flame))
+
+    total_frames = total_nuclear_flame  # 总帧数
     frame_duration = 33  # 每帧33毫秒 (约30帧每秒)
+    
 
     # 播放核弹爆炸动画
-    for frame_num in range(31, total_frames + 1):
+    for frame_num in range(start_nuclear_flame, total_frames + 1):
         frame_path = os.path.join(explosion_folder, f'frame_{frame_num}.png')
         if os.path.exists(frame_path):
             frame_image = pygame.image.load(frame_path)
@@ -74,6 +87,9 @@ def play_nuclear_animation(screen, width, height):
 def main_game(screen, width, height, font, small_font, medium_font, large_font, sounds, images, player, player_speed_factor, missile_count, missiles, enemies, enemy_bullets, bullets, score, lives, stars, game_time):
     global nuclear_count, nuke_fired_time  # 使用全局变量来管理核弹数量
     stop_game_event = threading.Event()  # 用于控制游戏的暂停和恢复
+
+    nuke_pause_duration = 0  # 核弹暂停时长初始化
+
     esc_press_time = None  # 用于记录ESC键按下的时间
     double_esc_interval = 0.5  # 连续按下两次ESC键的最大间隔时间（秒）
 
@@ -208,8 +224,8 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
         if player.y > height - player.height:
             player.y = height - player.height
 
-        # 核弹发射后5-8秒内不生成敌机
-        if nuke_fired_time is None or (time.time() - nuke_fired_time > 8):  # 确保随机暂停时间在5-8秒内
+        # 核弹发射后 10-15 秒内不生成敌机
+        if nuke_fired_time is None or (current_time - nuke_fired_time > nuke_pause_duration):
             # 正常生成敌机的逻辑
             if random.randint(1, 60) == 1:
                 if random.randint(1, 10) == 1:  # 10% 概率生成擎天柱
