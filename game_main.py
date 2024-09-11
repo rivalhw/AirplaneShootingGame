@@ -45,9 +45,8 @@ def play_nuclear_explosion(screen, width, height, sounds, stop_game_event):
 
     # 记录核弹发射的时间和敌机生成暂停的时间
     nuke_fired_time = time.time()  # 记录核弹发射的时间
-    # nuke_pause_duration = random.randint(25, 35)  # 随机暂停 10 到 15 秒
     nuke_pause_duration = 35
-    print("nuke_pause_duration:"+str(nuke_pause_duration) +"秒")
+    print("nuke_pause_duration:" + str(nuke_pause_duration) + "秒")
     # 核弹爆炸结束后恢复游戏逻辑
     stop_game_event.clear()  # 清除暂停事件，恢复游戏逻辑
     return nuke_pause_duration
@@ -58,14 +57,13 @@ def play_nuclear_animation(screen, width, height):
     explosion_folder = './images/nuclear'
 
     start_nuclear_flame = random.randint(31, 48)
-    print("start_nuclear_flame:"+str(start_nuclear_flame))
+    print("start_nuclear_flame:" + str(start_nuclear_flame))
 
-    total_nuclear_flame = random.randint(300, 660)
-    print("total_nuclear_flame:"+str(total_nuclear_flame))
+    total_nuclear_flame = random.randint(200, 220)
+    print("total_nuclear_flame:" + str(total_nuclear_flame))
 
     total_frames = total_nuclear_flame  # 总帧数
     frame_duration = 33  # 每帧33毫秒 (约30帧每秒)
-    
 
     # 播放核弹爆炸动画
     for frame_num in range(start_nuclear_flame, total_frames + 1):
@@ -83,6 +81,7 @@ def play_nuclear_animation(screen, width, height):
             print(f"Frame {frame_num} not found!")
             break
 
+
 # 游戏主逻辑
 def main_game(screen, width, height, font, small_font, medium_font, large_font, sounds, images, player, player_speed_factor, missile_count, missiles, enemies, enemy_bullets, bullets, score, lives, stars, game_time):
     global nuclear_count, nuke_fired_time  # 使用全局变量来管理核弹数量
@@ -92,6 +91,7 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
 
     esc_press_time = None  # 用于记录ESC键按下的时间
     double_esc_interval = 0.5  # 连续按下两次ESC键的最大间隔时间（秒）
+    is_paused = False  # 追踪当前游戏是否已暂停
 
     start_ticks = pygame.time.get_ticks()  # 游戏开始时间
     played_time = play_time.read_played_time()  # 获取今天已玩时间
@@ -100,8 +100,8 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
     last_save_time = time.time()  # 初始化上次保存游戏时长的时间
 
     # 初始化玩家目标位置
-    player_target_x = player.x  
-    player_target_y = player.y  
+    player_target_x = player.x
+    player_target_y = player.y
 
     if remaining_time <= 0:
         # 今日游戏时间已满，显示提示并退出
@@ -137,7 +137,7 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
                 pygame.quit()
                 return  # 退出游戏
 
-            # 检查鼠标左键按下
+            # 检查鼠标左键按下，发射子弹
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 bullets.append(pygame.Rect(player.left + 10, player.top, 6, 15))
                 bullets.append(pygame.Rect(player.right - 16, player.top, 6, 15))
@@ -163,35 +163,29 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
         # 检查按键
         keys = pygame.key.get_pressed()
 
-        # ESC键暂停和退出逻辑
+        # ESC键返回开始菜单
         if keys[pygame.K_ESCAPE]:
-            if esc_press_time is None:
-                esc_press_time = time.time()  # 记录第一次按下的时间
-                game_pause.pause_game(screen, medium_font, width, height)  # 第一次按ESC时，暂停游戏
-            else:
-                # 检查第二次按ESC键的时间差
-                if time.time() - esc_press_time <= double_esc_interval:
-                    running = False  # 第二次按ESC键，退出游戏
-                    game_start_screen.main_menu()  # 返回到游戏主菜单
-                esc_press_time = None  # 重置esc_press_time
-        else:
-            esc_press_time = None  # 如果ESC键没有按下，重置记录
+            running = False
+            pygame.mixer.music.stop()  # 停止背景音乐
+            game_start_screen.main_menu()  # 返回到游戏主菜单
 
+        # Shift键暂停游戏
+        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+            is_paused = True
+            game_pause.pause_game(screen, medium_font, width, height)  # 暂停
+            is_paused = False  # 按任意键恢复游戏
 
+        # 添加空格键发射子弹的逻辑
         if keys[pygame.K_SPACE]:
-            if current_time - last_shot_time >= 0.2:  # 子弹发射间隔为0.2秒
+            if current_time - last_shot_time >= 0.2:  # 发射间隔0.2秒
                 bullets.append(pygame.Rect(player.left + 10, player.top, 6, 15))
                 bullets.append(pygame.Rect(player.right - 16, player.top, 6, 15))
                 sounds["shoot"].play()
-                last_shot_time = current_time  # 更新上次发射子弹的时间
+                last_shot_time = current_time  # 记录最后一次发射时间
 
-        if keys[pygame.K_m] and missile_count > 0:
-            missiles.append(pygame.Rect(player.centerx - 5, player.top, 10, 20))  # 玩家导弹
-            missile_count -= 1
-            sounds["missile"].play()
+        if is_paused:
+            continue  # 暂停状态时不继续游戏逻辑
 
-        if keys[pygame.K_ESCAPE]:
-            game_pause.pause_game(screen, medium_font, width, height)  # 暂停游戏
 
         # 移动战机到鼠标或键盘目标位置
         if keys[pygame.K_LEFT] and player.left > 0:
