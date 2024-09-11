@@ -29,8 +29,8 @@ def play_nuclear_explosion(screen, width, height, sounds, stop_game_event):
     # 清空事件队列，确保没有积压的事件
     pygame.event.clear()
 
-    # 显示倒计时 5 到 1
-    for i in range(5, 0, -1):
+    # 显示倒计时 3 到 1
+    for i in range(3, 0, -1):
         screen.fill(pygame.Color("black"))
         countdown_text = pygame.font.Font(None, 72).render(str(i), True, pygame.Color("red"))
         screen.blit(countdown_text, (width // 2 - countdown_text.get_width() // 2, height // 2))
