@@ -104,13 +104,14 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
     player_target_y = player.y
 
     if remaining_time <= 0:
-        # 今日游戏时间已满，显示提示并退出
-        screen.fill(pygame.Color("black"))
-        alert_text = large_font.render("今日游戏时间已满，请明日再来！", True, pygame.Color("red"))
-        screen.blit(alert_text, (width // 2 - alert_text.get_width() // 2, height // 2))
-        pygame.display.flip()
-        time.sleep(3)  # 显示3秒钟的提示
-        return
+        # 今日游戏时间已满，显示密码输入界面
+        unlocked = play_time.password_unlock_screen(screen, width, height, large_font, medium_font, small_font)
+        if not unlocked:
+            # 用户取消或未输入正确密码，返回主菜单
+            return
+        # 密码正确，重新计算剩余时间
+        played_time = play_time.read_played_time()
+        remaining_time = play_time.max_daily_time - played_time
 
     clock = pygame.time.Clock()
     running = True
