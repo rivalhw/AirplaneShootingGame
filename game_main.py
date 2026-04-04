@@ -19,7 +19,7 @@ AUTHOR_NAME = "游戏作者: 大伟说AI"
 nuclear_count = 2  # 每局2枚核弹
 nuke_fired_time = None  # 核弹发射后的时间，用于暂停敌机生成
 
-def play_nuclear_explosion(screen, width, height, sounds, stop_game_event):
+def play_nuclear_explosion(screen, width, height, sounds, stop_game_event, font=None):
     global nuke_fired_time  # 声明全局变量
     pygame.mixer.Sound("./sounds/nuclear.mp3").play()
 
@@ -43,9 +43,18 @@ def play_nuclear_explosion(screen, width, height, sounds, stop_game_event):
     # 核弹倒计时结束后，播放核爆炸动画
     play_nuclear_animation(screen, width, height)
 
+    # 核弹爆炸完成后屏幕画面清除，表示一切被毁灭
+    screen.fill(pygame.Color("black"))
+    if font:
+        destruction_text = font.render("一切已被毁灭", True, pygame.Color("red"))
+        screen.blit(destruction_text, (width // 2 - destruction_text.get_width() // 2, height // 2))
+    pygame.display.flip()
+    time.sleep(3)  # 显示3秒
+    pygame.event.clear()
+
     # 记录核弹发射的时间和敌机生成暂停的时间
     nuke_fired_time = time.time()  # 记录核弹发射的时间
-    nuke_pause_duration = 35
+    nuke_pause_duration = 5
     print("nuke_pause_duration:" + str(nuke_pause_duration) + "秒")
     # 核弹爆炸结束后恢复游戏逻辑
     stop_game_event.clear()  # 清除暂停事件，恢复游戏逻辑
@@ -97,7 +106,9 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
     played_time = play_time.read_played_time()  # 获取今天已玩时间
     remaining_time = play_time.max_daily_time - played_time  # 计算剩余时间
     last_shot_time = 0  # 初始化上次发射子弹的时间
+    last_missile_time = 0  # 初始化上次发射导弹的时间
     last_save_time = time.time()  # 初始化上次保存游戏时长的时间
+    paused_screen = None  # 暂停时保存的屏幕画面
 
     # 初始化玩家目标位置
     player_target_x = player.x
@@ -138,6 +149,12 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
                 pygame.quit()
                 return  # 退出游戏
 
+            # Shift键暂停/恢复游戏
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT):
+                is_paused = not is_paused
+                if is_paused:
+                    paused_screen = screen.copy()
+
             # 检查鼠标左键按下，发射子弹
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 bullets.append(pygame.Rect(player.left + 10, player.top, 6, 15))
@@ -147,9 +164,15 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
             # 检查鼠标右键按下，触发核弹效果
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and nuclear_count > 0:
                 # 播放核弹效果并继续游戏直到倒计时开始
-                play_nuclear_explosion(screen, width, height, sounds, stop_game_event)
+                play_nuclear_explosion(screen, width, height, sounds, stop_game_event, large_font)
                 # 核弹数量减1
                 nuclear_count -= 1
+                # 清除所有敌军和子弹，表示核弹毁灭一切
+                enemies.clear()
+                enemy_bullets.clear()
+                bullets.clear()
+                missiles.clear()
+                active_explosions.clear()
 
             # 检查鼠标移动，更新目标位置
             if event.type == pygame.MOUSEMOTION:
@@ -170,12 +193,6 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
             pygame.mixer.music.stop()  # 停止背景音乐
             game_start_screen.main_menu()  # 返回到游戏主菜单
 
-        # Shift键暂停游戏
-        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-            is_paused = True
-            game_pause.pause_game(screen, medium_font, width, height)  # 暂停
-            is_paused = False  # 按任意键恢复游戏
-
         # 添加空格键发射子弹的逻辑
         if keys[pygame.K_SPACE]:
             if current_time - last_shot_time >= 0.2:  # 发射间隔0.2秒
@@ -184,7 +201,22 @@ def main_game(screen, width, height, font, small_font, medium_font, large_font, 
                 sounds["shoot"].play()
                 last_shot_time = current_time  # 记录最后一次发射时间
 
+        # 添加m键发射导弹的逻辑
+        if keys[pygame.K_m]:
+            if current_time - last_missile_time >= 0.5 and missile_count > 0:  # 发射间隔0.5秒
+                missiles.append(pygame.Rect(player.left + 10, player.top, 10, 30))
+                missiles.append(pygame.Rect(player.right - 20, player.top, 10, 30))
+                sounds["missile"].play()
+                missile_count -= 1
+                last_missile_time = current_time  # 记录最后一次发射时间
+
         if is_paused:
+            if paused_screen:
+                screen.blit(paused_screen, (0, 0))
+            pause_text = medium_font.render("游戏暂停中，按Shift继续", True, pygame.Color("white"))
+            screen.blit(pause_text, (width // 2 - pause_text.get_width() // 2, height // 2))
+            pygame.display.flip()
+            clock.tick(60)
             continue  # 暂停状态时不继续游戏逻辑
 
 
